@@ -1,22 +1,32 @@
 import { comparators } from '@/helpers'
 import qbit from '@/services/qbit'
+import { faker } from '@faker-js/faker/locale/en'
 import { useSorted } from '@vueuse/core'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { shallowRef, triggerRef } from 'vue'
 
 export const useTagStore = defineStore('tags', () => {
   const _tags = shallowRef<Set<string>>(new Set())
+  const anonymizedMap = shallowRef(new Map<string, string>())
   const tags = useSorted(() => Array.from(_tags.value.values()), comparators.text.asc)
 
   function syncFromMaindata(fullUpdate: boolean, values: string[], removed?: string[]) {
     if (fullUpdate) {
       _tags.value = new Set(values)
+      anonymizedMap.value = new Map(values.map(v => [v, faker.word.sample()]))
       return
     }
 
-    values.forEach(tag => _tags.value.add(tag))
-    removed?.forEach(tag => _tags.value.delete(tag))
+    values.forEach(tag => {
+      _tags.value.add(tag)
+      anonymizedMap.value.set(tag, faker.word.sample())
+    })
+    removed?.forEach(tag => {
+      _tags.value.delete(tag)
+      anonymizedMap.value.delete(tag)
+    })
     triggerRef(_tags)
+    triggerRef(anonymizedMap)
   }
 
   async function createTags(tags: string[]) {
@@ -47,6 +57,7 @@ export const useTagStore = defineStore('tags', () => {
   }
 
   return {
+    anonymizedMap,
     tags,
     syncFromMaindata,
     createTags,
@@ -54,7 +65,9 @@ export const useTagStore = defineStore('tags', () => {
     deleteTags,
     $reset: () => {
       _tags.value.clear()
+      anonymizedMap.value.clear()
       triggerRef(_tags)
+      triggerRef(anonymizedMap)
     }
   }
 })

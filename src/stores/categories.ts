@@ -1,6 +1,7 @@
 import { comparators } from '@/helpers'
 import qbit from '@/services/qbit'
 import { Category } from '@/types/qbit/models'
+import { faker } from '@faker-js/faker/locale/en'
 import { useSorted } from '@vueuse/core'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { shallowRef, triggerRef } from 'vue'
@@ -8,6 +9,8 @@ import { shallowRef, triggerRef } from 'vue'
 export const useCategoryStore = defineStore('categories', () => {
   /** Key: Category name */
   const _categoryMap = shallowRef<Map<string, Category>>(new Map())
+  const anonymizedMap = shallowRef(new Map<string, string>())
+
   const categories = useSorted(
     () => Array.from(_categoryMap.value.values()),
     (a, b) => comparators.text.asc(a.name, b.name)
@@ -16,26 +19,26 @@ export const useCategoryStore = defineStore('categories', () => {
   function syncFromMaindata(fullUpdate: boolean, entries: [string, Partial<Category>][], removed?: string[]) {
     if (fullUpdate) {
       _categoryMap.value = new Map(entries as [string, Category][])
+      anonymizedMap.value = new Map(entries.map(([name]) => [name, faker.word.sample()]))
       return
     }
 
     for (const [catName, qbitCat] of entries) {
       const oldCat = _categoryMap.value.get(catName)
-      if (oldCat) {
-        const newCat = {
-          name: qbitCat.name ?? oldCat.name,
-          savePath: qbitCat.savePath ?? oldCat.savePath
-        }
-        _categoryMap.value.set(catName, newCat)
-      } else {
-        _categoryMap.value.set(catName, {
-          name: qbitCat.name ?? catName,
-          savePath: qbitCat.savePath ?? ''
-        })
+      if (qbitCat.name) {
+        anonymizedMap.value.set(qbitCat.name, faker.word.sample())
       }
+      _categoryMap.value.set(catName, {
+        name: qbitCat.name ?? oldCat?.name ?? catName,
+        savePath: qbitCat.savePath ?? oldCat?.savePath ?? ''
+      })
     }
-    removed?.forEach(c => _categoryMap.value.delete(c))
+    removed?.forEach(c => {
+      _categoryMap.value.delete(c)
+      anonymizedMap.value.delete(c)
+    })
     triggerRef(_categoryMap)
+    triggerRef(anonymizedMap)
   }
 
   function getCategoryFromName(categoryName?: string) {
@@ -77,6 +80,7 @@ export const useCategoryStore = defineStore('categories', () => {
   }
 
   return {
+    anonymizedMap,
     categories,
     syncFromMaindata,
     getCategoryFromName,
@@ -85,7 +89,9 @@ export const useCategoryStore = defineStore('categories', () => {
     deleteCategories,
     $reset: () => {
       _categoryMap.value.clear()
+      anonymizedMap.value.clear()
       triggerRef(_categoryMap)
+      triggerRef(anonymizedMap)
     }
   }
 })

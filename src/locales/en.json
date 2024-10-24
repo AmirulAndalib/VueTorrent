@@ -1111,6 +1111,7 @@
         "showSessionStat": "Show Session Stats",
         "showSpeedGraph": "Show Speed Graph",
         "tip": "These settings are for the custom WebUI itself",
+        "useAnonymizedData": "Anonymize data (for sending reports)",
         "useBinarySize": "Replace data sizes by binary units (kB -> KiB)",
         "useBitSpeed": "Replace speed values by bits (kB/s -> kbps)",
         "useEmojiState": "Prepend torrent states with emojis",
